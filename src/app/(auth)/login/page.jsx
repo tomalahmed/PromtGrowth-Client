@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "react-toastify";
+import { AuthField, AuthInput } from "@/components/auth/AuthField";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import useAuth from "@/hooks/useAuth";
 import { getDashboardPath } from "@/utils/roleRedirect";
@@ -16,8 +18,9 @@ function getErrorMessage(error) {
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading, login, googleLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,11 +28,18 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  const redirectPath =
+    searchParams.get("redirect") || (user ? getDashboardPath(user.role) : null);
+
   useEffect(() => {
     if (!loading && user) {
-      router.replace(getDashboardPath(user.role));
+      router.replace(redirectPath || getDashboardPath(user.role));
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, redirectPath]);
+
+  const navigateAfterAuth = (role) => {
+    router.push(searchParams.get("redirect") || getDashboardPath(role));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +48,7 @@ export default function LoginPage() {
     try {
       const data = await login({ email, password });
       toast.success("Welcome back!");
-      router.push(getDashboardPath(data.data.role));
+      navigateAfterAuth(data.data.role);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -52,7 +62,7 @@ export default function LoginPage() {
     try {
       const data = await googleLogin();
       toast.success("Signed in with Google!");
-      router.push(getDashboardPath(data.data.role));
+      navigateAfterAuth(data.data.role);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -71,113 +81,116 @@ export default function LoginPage() {
   return (
     <main className="auth-fade-in mx-auto w-full max-w-[440px]">
       <div className="mb-8 text-center">
-        <h1 className="mb-2 text-[32px] font-bold leading-[1.25] tracking-tight text-primary">
+        <h1 className="mb-2 text-[32px] font-bold leading-tight tracking-tight text-primary">
           PromptGrowth
         </h1>
-        <p className="text-[16px] leading-[1.5] text-on-surface-variant">
+        <p className="text-[15px] leading-relaxed text-on-surface-variant">
           Welcome back. Please enter your details.
         </p>
       </div>
 
-      <div className="auth-card rounded-2xl border border-transparent bg-surface-container-lowest p-6 transition-shadow duration-300 md:p-8">
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label
-              className="block text-[14px] font-medium leading-[1.4] text-on-surface-variant"
-              htmlFor="email"
-            >
-              Email
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
-                mail
-              </span>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full rounded-xl border border-outline-variant/20 bg-surface-container-lowest py-3 pl-10 pr-4 text-[16px] text-on-surface outline-none transition-colors placeholder:text-outline-variant focus:border-primary-container focus:ring-1 focus:ring-primary-container"
-              />
-            </div>
-          </div>
+      <div className="rounded-2xl border border-outline-variant/10 bg-white p-7 shadow-[0_4px_24px_-4px_rgba(28,82,83,0.1)] md:p-8">
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <AuthField label="Email" htmlFor="email">
+            <AuthInput
+              id="email"
+              name="email"
+              type="email"
+              required
+              icon={Mail}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+            />
+          </AuthField>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label
-                className="block text-[14px] font-medium leading-[1.4] text-on-surface-variant"
-                htmlFor="password"
-              >
-                Password
-              </label>
-              <span className="cursor-not-allowed text-[12px] font-semibold leading-[1.2] text-primary opacity-60">
+          <AuthField
+            label="Password"
+            htmlFor="password"
+            labelExtra={
+              <span className="text-[12px] font-semibold text-primary/70">
                 Forgot Password?
               </span>
-            </div>
+            }
+          >
             <div className="relative">
-              <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
-                lock
-              </span>
-              <input
+              <AuthInput
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
                 required
+                icon={Lock}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-outline-variant/20 bg-surface-container-lowest py-3 pl-10 pr-10 text-[16px] text-on-surface outline-none transition-colors placeholder:text-outline-variant focus:border-primary-container focus:ring-1 focus:ring-primary-container"
+                inputClassName="pr-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant transition-colors hover:text-on-surface-variant focus:outline-none"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-outline-variant transition-colors hover:text-on-surface-variant"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                <span className="material-symbols-outlined text-[20px]">
-                  {showPassword ? "visibility_off" : "visibility"}
-                </span>
+                {showPassword ? (
+                  <EyeOff className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                ) : (
+                  <Eye className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                )}
               </button>
             </div>
-          </div>
+          </AuthField>
 
           <button
             type="submit"
             disabled={submitting}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-container px-6 py-3 text-[14px] font-medium text-on-primary shadow-sm transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-container px-6 py-3.5 text-[14px] font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span>{submitting ? "Logging in..." : "Login"}</span>
-            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
         </form>
 
-        <div className="mb-4 mt-8 flex items-center gap-4">
+        <div className="my-7 flex items-center gap-4">
           <div className="h-px flex-1 bg-outline-variant/30" />
-          <span className="text-[12px] font-semibold leading-[1.2] text-outline">or</span>
+          <span className="text-[12px] font-semibold uppercase tracking-wide text-outline">
+            or
+          </span>
           <div className="h-px flex-1 bg-outline-variant/30" />
         </div>
 
         <GoogleAuthButton
           label="Sign in with Google"
+          variant="soft"
           onClick={handleGoogleLogin}
           disabled={googleLoading || submitting}
         />
       </div>
 
-      <div className="mt-4 text-center">
-        <p className="text-[16px] leading-[1.5] text-on-surface-variant">
+      <div className="mt-6 text-center">
+        <p className="text-[15px] text-on-surface-variant">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="text-[14px] font-semibold text-primary underline-offset-4 transition-all hover:underline"
+            className="font-semibold text-primary hover:underline"
           >
             Register here
           </Link>
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto w-full max-w-[440px] text-center">
+          <p className="text-on-surface-variant">Loading...</p>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

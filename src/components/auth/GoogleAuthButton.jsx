@@ -1,12 +1,24 @@
-export default function GoogleAuthButton({ label, onClick, disabled }) {
+export default function GoogleAuthButton({
+  label,
+  onClick,
+  disabled,
+  variant = "soft",
+}) {
+  const variants = {
+    soft:
+      "border border-outline-variant/25 bg-surface-container-low text-on-surface hover:bg-surface-container-high",
+    outline:
+      "border border-outline-variant/40 bg-white text-on-surface hover:bg-surface-container-low/60",
+  };
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center justify-center gap-3 rounded-xl border border-outline-variant/30 bg-surface-container-low px-6 py-3 text-[14px] font-medium leading-[1.4] text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
+      className={`flex w-full items-center justify-center gap-3 rounded-xl px-6 py-3.5 text-[14px] font-medium leading-[1.4] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]}`}
     >
-      <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24">
+      <svg aria-hidden="true" className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
         <path
           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
           fill="#4285F4"

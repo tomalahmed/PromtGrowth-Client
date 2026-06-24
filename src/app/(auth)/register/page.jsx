@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ImageIcon, Lock, Mail, User } from "lucide-react";
 import { toast } from "react-toastify";
+import { AuthField, AuthInput } from "@/components/auth/AuthField";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import useAuth from "@/hooks/useAuth";
 import { getDashboardPath } from "@/utils/roleRedirect";
@@ -15,9 +17,6 @@ function getErrorMessage(error) {
     "Something went wrong. Please try again."
   );
 }
-
-const inputClassName =
-  "block w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest py-3 pl-10 pr-3 text-[16px] text-on-surface outline-none transition-shadow focus:border-primary-container focus:ring-1 focus:ring-primary-container auth-input-focus";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -80,168 +79,117 @@ export default function RegisterPage() {
   return (
     <main className="auth-fade-in mx-auto w-full max-w-[480px]">
       <div className="mb-8 text-center">
-        <h1 className="text-[32px] font-bold leading-[1.25] tracking-tight text-primary md:text-[48px] md:leading-[1.2]">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-primary md:text-[42px]">
           PromptGrowth
         </h1>
-        <p className="mt-2 text-[16px] leading-[1.5] text-on-surface-variant">
+        <p className="mt-2 text-[15px] leading-relaxed text-on-surface-variant">
           Join the leading AI prompt marketplace.
         </p>
       </div>
 
-      <div className="group relative overflow-hidden rounded-[24px] border border-outline-variant/30 bg-surface-container-lowest p-8 auth-card-soft">
-        <div className="mb-8 text-center">
-          <h2 className="text-[24px] font-semibold leading-[1.4] text-on-surface">
+      <div className="relative overflow-hidden rounded-[24px] border border-outline-variant/20 bg-white p-7 shadow-[0_4px_24px_-4px_rgba(28,82,83,0.1)] md:p-8">
+        <div className="mb-7 text-center">
+          <h2 className="text-[22px] font-semibold text-on-surface">
             Create an Account
           </h2>
         </div>
 
         <GoogleAuthButton
           label="Sign up with Google"
+          variant="outline"
           onClick={handleGoogleSignup}
           disabled={googleLoading || submitting}
         />
 
-        <div className="relative mb-8 mt-8 flex items-center">
-          <div className="flex-grow border-t border-outline-variant/50" />
-          <span className="mx-4 shrink-0 text-[12px] font-semibold uppercase tracking-wider text-on-surface-variant">
+        <div className="relative my-7 flex items-center">
+          <div className="flex-grow border-t border-outline-variant/40" />
+          <span className="mx-4 shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-on-surface-variant">
             Or register with email
           </span>
-          <div className="flex-grow border-t border-outline-variant/50" />
+          <div className="flex-grow border-t border-outline-variant/40" />
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label
-              className="mb-2 block text-[14px] font-medium text-on-surface"
-              htmlFor="name"
-            >
-              Full Name
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <span className="material-symbols-outlined text-on-surface-variant">
-                  person
-                </span>
-              </div>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Jane Doe"
-                className={inputClassName}
-              />
-            </div>
-          </div>
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <AuthField label="Full Name" htmlFor="name">
+            <AuthInput
+              id="name"
+              name="name"
+              type="text"
+              required
+              icon={User}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Doe"
+            />
+          </AuthField>
 
-          <div>
-            <label
-              className="mb-2 block text-[14px] font-medium text-on-surface"
-              htmlFor="email"
-            >
-              Email Address
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <span className="material-symbols-outlined text-on-surface-variant">
-                  mail
-                </span>
-              </div>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="jane@example.com"
-                className={inputClassName}
-              />
-            </div>
-          </div>
+          <AuthField label="Email Address" htmlFor="email">
+            <AuthInput
+              id="email"
+              name="email"
+              type="email"
+              required
+              icon={Mail}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="jane@example.com"
+            />
+          </AuthField>
 
-          <div>
-            <label
-              className="mb-2 block text-[14px] font-medium text-on-surface"
-              htmlFor="photo"
-            >
-              Photo URL (Optional)
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <span className="material-symbols-outlined text-on-surface-variant">
-                  image
-                </span>
-              </div>
-              <input
-                id="photo"
-                name="photo"
-                type="url"
-                value={photoURL}
-                onChange={(e) => setPhotoURL(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                className={inputClassName}
-              />
-            </div>
-          </div>
+          <AuthField label="Photo URL (Optional)" htmlFor="photo">
+            <AuthInput
+              id="photo"
+              name="photo"
+              type="url"
+              icon={ImageIcon}
+              value={photoURL}
+              onChange={(e) => setPhotoURL(e.target.value)}
+              placeholder="https://example.com/avatar.jpg"
+            />
+          </AuthField>
 
-          <div>
-            <label
-              className="mb-2 block text-[14px] font-medium text-on-surface"
-              htmlFor="password"
-            >
-              Password
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <span className="material-symbols-outlined text-on-surface-variant">
-                  lock
-                </span>
-              </div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className={inputClassName}
-              />
-            </div>
-          </div>
+          <AuthField label="Password" htmlFor="password">
+            <AuthInput
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              icon={Lock}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </AuthField>
 
           <button
             type="submit"
             disabled={submitting}
-            className="mt-8 w-full rounded-xl bg-primary-container px-6 py-3 text-[14px] font-medium text-on-primary shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-3 w-full rounded-xl bg-primary-container px-6 py-3.5 text-[14px] font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Creating account..." : "Register"}
           </button>
         </form>
 
-        <div className="mt-4 text-center">
-          <p className="text-[16px] leading-[1.5] text-on-surface-variant">
+        <div className="mt-5 text-center">
+          <p className="text-[15px] text-on-surface-variant">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="font-semibold text-primary-container hover:underline"
+              className="font-semibold text-primary hover:underline"
             >
               Login
             </Link>
           </p>
         </div>
 
-        <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-primary-container/5 blur-2xl transition-colors duration-500 group-hover:bg-primary-container/10" />
+        <div className="pointer-events-none absolute -bottom-20 -right-20 h-44 w-44 rounded-full bg-primary-container/[0.06] blur-2xl" />
       </div>
 
-      <div className="mt-8 flex justify-center gap-4 text-[12px] font-semibold text-on-surface-variant">
-        <span className="cursor-not-allowed hover:text-primary">Privacy Policy</span>
-        <span>•</span>
-        <span className="cursor-not-allowed hover:text-primary">Terms of Service</span>
+      <div className="mt-8 flex justify-center gap-3 text-[12px] font-medium text-on-surface-variant">
+        <span className="hover:text-primary">Privacy Policy</span>
+        <span className="text-outline-variant">•</span>
+        <span className="hover:text-primary">Terms of Service</span>
       </div>
     </main>
   );
