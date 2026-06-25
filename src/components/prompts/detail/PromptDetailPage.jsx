@@ -35,6 +35,7 @@ import {
   getInitials,
   isPromptContentLocked,
 } from "@/lib/promptUtils";
+import { setPremiumReturnTo } from "@/lib/premiumCheckout";
 import { cn } from "@/lib/cn";
 
 function StarRating({ rating, size = "md" }) {
@@ -316,7 +317,10 @@ export default function PromptDetailPage() {
                     Subscribe to Premium to unlock private prompts, copy content,
                     and leave reviews.
                   </p>
-                  <Link href="/pricing">
+                  <Link
+                    href="/pricing"
+                    onClick={() => setPremiumReturnTo(`/prompts/${promptId}`)}
+                  >
                     <Button>
                       <Crown className="h-4 w-4" strokeWidth={2} />
                       Subscribe to Premium
