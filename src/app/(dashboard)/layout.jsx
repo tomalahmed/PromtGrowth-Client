@@ -1,12 +1,18 @@
+"use client";
+
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
+import Sidebar from "@/components/dashboard/Sidebar";
 
 export default function DashboardShellLayout({ children }) {
   return (
     <div className="flex min-h-screen flex-col pt-20">
       <Navbar />
       <main className="flex-1">
-        <div className="mx-auto max-w-[1280px] px-4 py-10 md:px-10">{children}</div>
+        <div className="mx-auto flex max-w-[1280px] flex-col gap-6 px-4 py-8 lg:flex-row lg:px-10">
+          <Sidebar />
+          <div className="min-w-0 flex-1">{children}</div>
+        </div>
       </main>
       <Footer />
     </div>
