@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
+  FileText,
   PlusCircle,
   Users,
   X,
@@ -26,9 +27,9 @@ const NAV_BY_ROLE = {
     { href: "/user/reviews", label: "My Reviews", icon: MessageSquare },
   ],
   creator: [
-    { href: "/creator", label: "Analytics", icon: BarChart3 },
+    { href: "/creator", label: "Creator Hub", icon: LayoutDashboard },
     { href: "/creator/add-prompt", label: "Add Prompt", icon: PlusCircle },
-    { href: "/creator/my-prompts", label: "My Prompts", icon: LayoutDashboard },
+    { href: "/creator/my-prompts", label: "My Prompts", icon: FileText },
   ],
   admin: [
     { href: "/admin", label: "Overview", icon: LayoutDashboard },

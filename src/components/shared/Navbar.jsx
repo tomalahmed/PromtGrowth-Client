@@ -7,14 +7,21 @@ import { Menu, X } from "lucide-react";
 import { toast } from "react-toastify";
 import useAuth from "@/hooks/useAuth";
 import { isDemoAccount } from "@/lib/demoAccounts";
-import { getDashboardPath } from "@/utils/roleRedirect";
+import {
+  getDashboardHref,
+  getDashboardLabel,
+  getMainNavLinks,
+  getPrimaryAccountAction,
+  isNavLinkActive,
+} from "@/utils/navLinks";
 
-const navLinks = [
-  { href: "/", label: "Home", exact: true },
-  { href: "/prompts", label: "Marketplace" },
-  { href: "/#top-creators", label: "Creators" },
-  { href: "/pricing", label: "Premium" },
-];
+function NavLink({ link, active, onClick, className }) {
+  return (
+    <Link href={link.href} onClick={onClick} className={className}>
+      {link.label}
+    </Link>
+  );
+}
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -22,26 +29,36 @@ export default function Navbar() {
   const { user, loading, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isActive = (href, exact) => {
-    if (href === "/#top-creators") return false;
-    if (exact) return pathname === "/";
-    if (href === "/prompts") return pathname === "/prompts" || pathname.startsWith("/prompts/");
-    return pathname.startsWith(href);
-  };
+  const mainLinks = getMainNavLinks(user);
+  const dashboardHref = getDashboardHref(user);
+  const dashboardLabel = user ? getDashboardLabel(user.role) : "Dashboard";
+  const primaryAction = user ? getPrimaryAccountAction(user) : null;
+  const isDemoUser = user ? isDemoAccount(user.email) : false;
+
+  const closeMobile = () => setMobileOpen(false);
 
   const handleLogout = async () => {
     try {
       await logout();
       toast.success("Logged out successfully");
       router.push("/");
-      setMobileOpen(false);
+      closeMobile();
     } catch {
       toast.error("Failed to logout");
     }
   };
 
-  const dashboardPath = user ? getDashboardPath(user.role) : "/user";
-  const isDemoUser = user ? isDemoAccount(user.email) : false;
+  const desktopLinkClass = (active) =>
+    `text-[14px] font-medium leading-[1.4] transition-colors ${
+      active
+        ? "border-b-2 border-primary pb-1 font-bold text-primary"
+        : "text-on-surface-variant hover:text-primary"
+    }`;
+
+  const mobileLinkClass = (active) =>
+    `rounded-lg px-3 py-2.5 text-[14px] font-medium ${
+      active ? "bg-primary-container/10 font-bold text-primary" : "text-on-surface-variant"
+    }`;
 
   return (
     <>
@@ -54,41 +71,45 @@ export default function Navbar() {
             PromptGrowth
           </Link>
 
-          <div className="hidden items-center gap-6 md:flex">
-            {navLinks.map((link) => {
-              const active = isActive(link.href, link.exact);
+          <div className="hidden items-center gap-5 lg:gap-6 md:flex">
+            {mainLinks.map((link) => {
+              const active = isNavLinkActive(pathname, link);
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`text-[14px] font-medium leading-[1.4] transition-colors ${
-                    active
-                      ? "border-b-2 border-primary pb-1 font-bold text-primary"
-                      : "text-on-surface-variant hover:text-primary"
-                  }`}
-                >
-                  {link.label}
-                </Link>
+                <NavLink
+                  key={link.href + link.label}
+                  link={link}
+                  active={active}
+                  className={desktopLinkClass(active)}
+                />
               );
             })}
           </div>
 
-          <div className="hidden items-center gap-4 md:flex">
+          <div className="hidden items-center gap-3 md:flex md:gap-4">
             {!loading && user ? (
               <>
                 {isDemoUser && (
-                  <span
-                    className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800"
+                  <Link
+                    href="/demo"
+                    className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800 transition-colors hover:bg-amber-200"
                     title="Demo sandbox — seeded data only"
                   >
                     Demo mode
-                  </span>
+                  </Link>
+                )}
+                {primaryAction && (
+                  <Link
+                    href={primaryAction.href}
+                    className="rounded-lg bg-primary-container px-5 py-2.5 text-[14px] font-medium text-on-primary transition-colors hover:bg-primary"
+                  >
+                    {primaryAction.label}
+                  </Link>
                 )}
                 <Link
-                  href={dashboardPath}
+                  href={dashboardHref}
                   className="text-[14px] font-medium text-on-surface-variant transition-colors hover:text-primary"
                 >
-                  Dashboard
+                  {dashboardLabel}
                 </Link>
                 <button
                   type="button"
@@ -100,6 +121,12 @@ export default function Navbar() {
               </>
             ) : (
               <>
+                <Link
+                  href="/demo"
+                  className="text-[14px] font-medium text-on-surface-variant transition-colors hover:text-primary"
+                >
+                  Demo
+                </Link>
                 <Link
                   href="/login"
                   className="text-[14px] font-medium text-on-surface-variant transition-colors hover:text-primary"
@@ -132,39 +159,47 @@ export default function Navbar() {
       </nav>
 
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-20 z-40 border-t border-outline-variant/20 bg-white px-4 py-4 shadow-lg md:hidden">
+        <div className="fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-t border-outline-variant/20 bg-white px-4 py-4 shadow-lg md:hidden">
           <div className="mx-auto flex max-w-[1280px] flex-col gap-2">
-            {navLinks.map((link) => {
-              const active = isActive(link.href, link.exact);
+            {mainLinks.map((link) => {
+              const active = isNavLinkActive(pathname, link);
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`rounded-lg px-3 py-2.5 text-[14px] font-medium ${
-                    active
-                      ? "bg-primary-container/10 font-bold text-primary"
-                      : "text-on-surface-variant"
-                  }`}
-                >
-                  {link.label}
-                </Link>
+                <NavLink
+                  key={link.href + link.label}
+                  link={link}
+                  active={active}
+                  onClick={closeMobile}
+                  className={mobileLinkClass(active)}
+                />
               );
             })}
             <hr className="my-1 border-outline-variant/30" />
             {!loading && user ? (
               <>
                 {isDemoUser && (
-                  <span className="rounded-lg bg-amber-100 px-3 py-2 text-[12px] font-semibold text-amber-800">
+                  <Link
+                    href="/demo"
+                    onClick={closeMobile}
+                    className="rounded-lg bg-amber-100 px-3 py-2 text-[12px] font-semibold text-amber-800"
+                  >
                     Demo sandbox — seeded data only
-                  </span>
+                  </Link>
+                )}
+                {primaryAction && (
+                  <Link
+                    href={primaryAction.href}
+                    onClick={closeMobile}
+                    className="rounded-lg bg-primary-container px-3 py-2.5 text-center text-[14px] font-medium text-on-primary"
+                  >
+                    {primaryAction.label}
+                  </Link>
                 )}
                 <Link
-                  href={dashboardPath}
-                  onClick={() => setMobileOpen(false)}
+                  href={dashboardHref}
+                  onClick={closeMobile}
                   className="rounded-lg px-3 py-2.5 text-[14px] font-medium text-on-surface-variant"
                 >
-                  Dashboard
+                  {dashboardLabel}
                 </Link>
                 <button
                   type="button"
@@ -177,15 +212,22 @@ export default function Navbar() {
             ) : (
               <>
                 <Link
+                  href="/demo"
+                  onClick={closeMobile}
+                  className="rounded-lg px-3 py-2.5 text-[14px] font-medium text-on-surface-variant"
+                >
+                  Demo
+                </Link>
+                <Link
                   href="/login"
-                  onClick={() => setMobileOpen(false)}
+                  onClick={closeMobile}
                   className="rounded-lg px-3 py-2.5 text-[14px] font-medium text-on-surface-variant"
                 >
                   Login
                 </Link>
                 <Link
                   href="/register"
-                  onClick={() => setMobileOpen(false)}
+                  onClick={closeMobile}
                   className="rounded-lg bg-primary-container px-3 py-2.5 text-center text-[14px] font-medium text-on-primary"
                 >
                   Get Started

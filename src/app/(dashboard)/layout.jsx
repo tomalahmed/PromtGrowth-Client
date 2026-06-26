@@ -1,10 +1,18 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 import Sidebar from "@/components/dashboard/Sidebar";
 
 export default function DashboardShellLayout({ children }) {
+  const pathname = usePathname();
+  const isCreatorHub = pathname?.startsWith("/creator");
+
+  if (isCreatorHub) {
+    return children;
+  }
+
   return (
     <div className="flex min-h-screen flex-col pt-20">
       <Navbar />

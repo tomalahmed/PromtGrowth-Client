@@ -55,6 +55,23 @@ export function useCreatePrompt() {
   });
 }
 
+export function useUpdatePrompt() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ promptId, payload }) => {
+      const { data } = await axiosInstance.patch(`/prompts/${promptId}`, payload);
+      return data;
+    },
+    onSuccess: (_, { promptId }) => {
+      queryClient.invalidateQueries({ queryKey: ["prompts"] });
+      queryClient.invalidateQueries({ queryKey: ["prompts", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["prompt", promptId] });
+      queryClient.invalidateQueries({ queryKey: ["creator", "analytics"] });
+    },
+  });
+}
+
 export function useDeletePrompt() {
   const queryClient = useQueryClient();
 

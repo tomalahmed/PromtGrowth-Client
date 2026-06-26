@@ -3,11 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Filter, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import RoleGuard from "@/components/shared/RoleGuard";
-import PromptTable from "@/components/dashboard/PromptTable";
+import { CreatorPageHeader } from "@/components/dashboard/creator/CreatorFormCard";
+import CreatorPromptTable from "@/components/dashboard/creator/CreatorPromptTable";
 import Spinner from "@/components/ui/Spinner";
 import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
 import { useDeletePrompt, useMyPrompts } from "@/hooks/useDashboard";
 import { getApiErrorMessage } from "@/lib/apiErrors";
 
@@ -38,48 +42,53 @@ export default function CreatorMyPromptsPage() {
 
   return (
     <RoleGuard allowedRoles={["creator", "admin"]}>
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold text-primary">My Prompts</h1>
-            <p className="mt-1 text-on-surface-variant">
-              Manage prompts you have submitted to the marketplace.
-            </p>
-          </div>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <CreatorPageHeader
+          className="mb-0"
+          title="My Prompts"
+          subtitle="Manage prompts you have submitted to the marketplace."
+        />
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
           <Link href="/creator/add-prompt">
-            <button
-              type="button"
-              className="rounded-xl bg-primary-container px-5 py-2.5 text-[14px] font-semibold text-on-primary"
-            >
-              Add Prompt
-            </button>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Post New Prompt
+            </Button>
           </Link>
-        </div>
-
-        <div className="max-w-xs">
-          <Select
-            label="Filter by status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            options={STATUS_OPTIONS}
-            placeholder=""
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner label="Loading prompts..." />
-          </div>
-        ) : (
-          <PromptTable
-            prompts={prompts}
-            showActions
-            onView={(prompt) => router.push(`/prompts/${prompt._id}`)}
-            onDelete={handleDelete}
-            actionPending={deletePrompt.isPending}
-          />
-        )}
+        </motion.div>
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-6 max-w-xs"
+      >
+        <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-on-surface">
+          <Filter className="h-4 w-4 text-primary-container" strokeWidth={1.75} />
+          Filter by status
+        </div>
+        <Select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          options={STATUS_OPTIONS}
+          placeholder=""
+        />
+      </motion.div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Spinner label="Loading prompts..." />
+        </div>
+      ) : (
+        <CreatorPromptTable
+          prompts={prompts}
+          onView={(prompt) => router.push(`/prompts/${prompt._id}`)}
+          onEdit={(prompt) => router.push(`/creator/edit-prompt/${prompt._id}`)}
+          onDelete={handleDelete}
+          actionPending={deletePrompt.isPending}
+        />
+      )}
     </RoleGuard>
   );
 }
