@@ -8,8 +8,9 @@ import Sidebar from "@/components/dashboard/Sidebar";
 export default function DashboardShellLayout({ children }) {
   const pathname = usePathname();
   const isCreatorHub = pathname?.startsWith("/creator");
+  const isAdminHub = pathname?.startsWith("/admin");
 
-  if (isCreatorHub) {
+  if (isCreatorHub || isAdminHub) {
     return children;
   }
 

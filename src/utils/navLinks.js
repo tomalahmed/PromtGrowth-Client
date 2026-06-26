@@ -7,41 +7,17 @@ const PREMIUM = { href: "/pricing", label: "Premium" };
 
 export const PUBLIC_NAV_LINKS = [HOME, MARKETPLACE, CREATORS, PREMIUM];
 
+/** Logged-in users see a clean public nav; role tools live in each dashboard sidebar. */
+const AUTH_PUBLIC_NAV = [HOME, MARKETPLACE];
+
 export function getMainNavLinks(user) {
   if (!user) return PUBLIC_NAV_LINKS;
 
-  const base = [HOME, MARKETPLACE];
-  const premiumLink = user.isPremium ? [] : [PREMIUM];
-
-  switch (user.role) {
-    case "admin":
-      return [
-        ...base,
-        { href: "/admin", label: "Admin", exact: true },
-        { href: "/admin/prompts", label: "Moderation" },
-        { href: "/admin/users", label: "Users" },
-        { href: "/admin/reports", label: "Reports" },
-      ];
-    case "creator":
-      return [
-        ...base,
-        { href: "/creator", label: "Creator Hub", exact: true },
-        {
-          href: "/creator/my-prompts",
-          label: "My Prompts",
-          matchPrefixes: ["/creator/my-prompts", "/creator/add-prompt", "/creator/edit-prompt"],
-        },
-        ...premiumLink,
-      ];
-    default:
-      return [
-        ...base,
-        { href: "/user", label: "My Account", exact: true },
-        { href: "/user/bookmarks", label: "Saved" },
-        { href: "/user/reviews", label: "Reviews" },
-        ...premiumLink,
-      ];
+  const links = [...AUTH_PUBLIC_NAV];
+  if (!user.isPremium && user.role !== "admin") {
+    links.push(PREMIUM);
   }
+  return links;
 }
 
 export function getDashboardLabel(role) {
@@ -60,6 +36,10 @@ export function getPrimaryAccountAction(user) {
 
   if (user.role === "creator") {
     return { href: "/creator/add-prompt", label: "Post Prompt" };
+  }
+
+  if (user.role === "admin") {
+    return { href: "/admin/prompts", label: "Moderation" };
   }
 
   if (user.role === "user" && !user.isPremium) {

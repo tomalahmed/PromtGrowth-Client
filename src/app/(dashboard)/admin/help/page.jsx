@@ -1,12 +1,12 @@
 "use client";
 
 import RoleGuard from "@/components/shared/RoleGuard";
-import AdminUsersPanel from "@/components/dashboard/admin/AdminUsersPanel";
+import AdminHelpPanel from "@/components/dashboard/admin/AdminHelpPanel";
 
-export default function AdminUsersPage() {
+export default function AdminHelpPage() {
   return (
     <RoleGuard allowedRoles={["admin"]}>
-      <AdminUsersPanel />
+      <AdminHelpPanel />
     </RoleGuard>
   );
 }
