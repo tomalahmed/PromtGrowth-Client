@@ -55,12 +55,13 @@ export function AuthProvider({ children }) {
     const { auth, googleProvider } = getFirebaseAuth();
     const result = await signInWithPopup(auth, googleProvider);
     const firebaseUser = result.user;
+    const idToken = await firebaseUser.getIdToken();
 
     const { data } = await axiosInstance.post("/auth/google-sync", {
+      idToken,
       name: firebaseUser.displayName || "User",
       email: firebaseUser.email,
       photoURL: firebaseUser.photoURL || "",
-      firebaseUid: firebaseUser.uid,
     });
 
     setUser(data.data);

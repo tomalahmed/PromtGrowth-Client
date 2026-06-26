@@ -16,6 +16,7 @@ import {
 import { toast } from "react-toastify";
 import FadeUp from "@/components/shared/FadeUp";
 import Button from "@/components/ui/Button";
+import { isDemoEnabled } from "@/lib/featureFlags";
 import {
   buildDemoLoginUrl,
   DEMO_ACCOUNTS,
@@ -41,6 +42,19 @@ async function copyText(value, label) {
 
 export default function DemoPageContent() {
   const router = useRouter();
+
+  if (!isDemoEnabled) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-24 text-center">
+        <h1 className="mb-3 text-[28px] font-bold text-primary">Demo unavailable</h1>
+        <p className="mb-6 text-on-surface-variant">
+          Demo accounts are disabled in this environment. Create a free account or
+          contact the platform admin.
+        </p>
+        <Button onClick={() => router.push("/register")}>Create account</Button>
+      </div>
+    );
+  }
 
   const startDemoLogin = (account, { autoLogin = true, redirect } = {}) => {
     const url = buildDemoLoginUrl({
