@@ -1,12 +1,12 @@
 "use client";
 
 import RoleGuard from "@/components/shared/RoleGuard";
-import UserBookmarksPanel from "@/components/dashboard/user/UserBookmarksPanel";
+import UserSettingsPanel from "@/components/dashboard/user/UserSettingsPanel";
 
-export default function UserBookmarksPage() {
+export default function UserSettingsPage() {
   return (
     <RoleGuard allowedRoles={["user", "creator", "admin"]}>
-      <UserBookmarksPanel />
+      <UserSettingsPanel />
     </RoleGuard>
   );
 }

@@ -53,3 +53,14 @@ export function useRecentReviews(limit = 3) {
     staleTime: 60 * 1000,
   });
 }
+
+export function useMyReviews() {
+  return useQuery({
+    queryKey: ["reviews", "me"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/reviews/me");
+      return data;
+    },
+    staleTime: 30 * 1000,
+  });
+}

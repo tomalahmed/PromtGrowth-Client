@@ -9,8 +9,9 @@ export default function DashboardShellLayout({ children }) {
   const pathname = usePathname();
   const isCreatorHub = pathname?.startsWith("/creator");
   const isAdminHub = pathname?.startsWith("/admin");
+  const isUserHub = pathname?.startsWith("/user");
 
-  if (isCreatorHub || isAdminHub) {
+  if (isCreatorHub || isAdminHub || isUserHub) {
     return children;
   }
 
