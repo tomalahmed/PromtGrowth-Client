@@ -101,6 +101,11 @@ function LoginForm() {
 
     try {
       const data = await googleLogin();
+
+      if (data?.redirected) {
+        return;
+      }
+
       toast.success("Signed in with Google!");
       navigateAfterAuth(data.data.role);
     } catch (error) {

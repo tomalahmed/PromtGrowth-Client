@@ -60,6 +60,11 @@ export default function RegisterPage() {
 
     try {
       const data = await googleLogin();
+
+      if (data?.redirected) {
+        return;
+      }
+
       toast.success("Signed up with Google!");
       router.push(getDashboardPath(data.data.role));
     } catch (error) {
