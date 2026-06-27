@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ImageIcon, Lock, Mail, User } from "lucide-react";
 import { toast } from "react-toastify";
 import { AuthField, AuthInput } from "@/components/auth/AuthField";
+import AuthLoadingScreen from "@/components/auth/AuthLoadingScreen";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import useAuth from "@/hooks/useAuth";
 import { navigateAfterAuth } from "@/utils/navigateAfterAuth";
@@ -19,13 +20,20 @@ function getErrorMessage(error) {
 }
 
 export default function RegisterPage() {
-  const { user, loading, register, googleLogin } = useAuth();
+  const { user, loading, completingGoogle, authError, clearAuthError, register, googleLogin } =
+    useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [photoURL, setPhotoURL] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authError) return;
+    toast.error(authError);
+    clearAuthError();
+  }, [authError, clearAuthError]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -57,7 +65,7 @@ export default function RegisterPage() {
     setGoogleLoading(true);
 
     try {
-      const data = await googleLogin();
+      const data = await googleLogin("/register");
 
       if (data?.redirected) {
         return;
@@ -66,17 +74,20 @@ export default function RegisterPage() {
       toast.success("Signed up with Google!");
       navigateAfterAuth(data.data.role);
     } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
       setGoogleLoading(false);
+      toast.error(getErrorMessage(error));
     }
   };
 
-  if (loading) {
+  if (loading || completingGoogle) {
     return (
-      <main className="mx-auto w-full max-w-[480px] text-center">
-        <p className="text-on-surface-variant">Loading...</p>
-      </main>
+      <AuthLoadingScreen
+        message={
+          completingGoogle
+            ? "Completing your Google sign-up..."
+            : "Loading your session..."
+        }
+      />
     );
   }
 
@@ -103,6 +114,7 @@ export default function RegisterPage() {
           variant="outline"
           onClick={handleGoogleSignup}
           disabled={googleLoading || submitting}
+          loading={googleLoading}
         />
 
         <div className="relative my-7 flex items-center">

@@ -11,18 +11,20 @@ import {
 import {
   getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup,
   signInWithRedirect,
   signOut,
 } from "firebase/auth";
 import axiosInstance from "@/lib/axiosInstance";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { saveAuthRedirect } from "@/utils/authSession";
 
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [completingGoogle, setCompletingGoogle] = useState(false);
+  const [authError, setAuthError] = useState(null);
   const syncInFlight = useRef(null);
   const initializing = useRef(true);
 
@@ -32,13 +34,10 @@ export function AuthProvider({ children }) {
     }
 
     const syncPromise = (async () => {
-      const idToken = await firebaseUser.getIdToken();
+      const idToken = await firebaseUser.getIdToken(true);
 
       const { data } = await axiosInstance.post("/auth/google-sync", {
         idToken,
-        name: firebaseUser.displayName || "User",
-        email: firebaseUser.email,
-        photoURL: firebaseUser.photoURL || "",
       });
 
       setUser(data.data);
@@ -68,6 +67,7 @@ export function AuthProvider({ children }) {
       if (!cancelled) {
         initializing.current = false;
         setLoading(false);
+        setCompletingGoogle(false);
       }
     };
 
@@ -77,6 +77,10 @@ export function AuthProvider({ children }) {
 
         const redirectResult = await getRedirectResult(auth);
         if (redirectResult?.user) {
+          if (!cancelled) {
+            setCompletingGoogle(true);
+            setAuthError(null);
+          }
           await syncFirebaseUser(redirectResult.user);
           return;
         }
@@ -85,7 +89,9 @@ export function AuthProvider({ children }) {
           await fetchMe();
           return;
         } catch {
-          setUser(null);
+          if (!cancelled) {
+            setUser(null);
+          }
         }
 
         if (auth.currentUser) {
@@ -95,6 +101,11 @@ export function AuthProvider({ children }) {
         console.error("[auth] Session initialization failed", error);
         if (!cancelled) {
           setUser(null);
+          setAuthError(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Could not restore your session."
+          );
         }
       } finally {
         finishLoading();
@@ -107,11 +118,7 @@ export function AuthProvider({ children }) {
       initializeAuth();
 
       unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (initializing.current) {
-          return;
-        }
-
-        if (!firebaseUser) {
+        if (initializing.current || !firebaseUser) {
           return;
         }
 
@@ -154,48 +161,44 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await axiosInstance.post("/auth/logout");
+    try {
+      await axiosInstance.post("/auth/logout");
+    } catch {
+      // Continue clearing local session even if the API call fails.
+    }
 
     try {
       const { auth } = getFirebaseAuth();
       await signOut(auth);
     } catch {
-      // Ignore Firebase logout errors; the API cookie is already cleared.
+      // Ignore Firebase logout errors.
     }
 
     setUser(null);
   };
 
-  const googleLogin = async () => {
+  const googleLogin = async (redirectPath) => {
     const { auth, googleProvider } = getFirebaseAuth();
 
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      return await syncFirebaseUser(result.user);
-    } catch (error) {
-      if (
-        error?.code === "auth/popup-blocked" ||
-        error?.code === "auth/operation-not-supported-in-this-environment"
-      ) {
-        await signInWithRedirect(auth, googleProvider);
-        return { redirected: true };
-      }
-
-      throw error;
-    }
+    saveAuthRedirect(redirectPath);
+    await signInWithRedirect(auth, googleProvider);
+    return { redirected: true };
   };
 
   const value = useMemo(
     () => ({
       user,
       loading,
+      completingGoogle,
+      authError,
+      clearAuthError: () => setAuthError(null),
       register,
       login,
       logout,
       googleLogin,
       refetchUser: fetchMe,
     }),
-    [user, loading, fetchMe]
+    [user, loading, completingGoogle, authError, fetchMe]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

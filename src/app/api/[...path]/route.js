@@ -22,6 +22,16 @@ function buildUpstreamHeaders(request) {
     }
   }
 
+  const forwardedProto =
+    request.headers.get("x-forwarded-proto") ||
+    (request.nextUrl.protocol === "https:" ? "https" : "http");
+  headers.set("x-forwarded-proto", forwardedProto);
+
+  const host = request.headers.get("host");
+  if (host) {
+    headers.set("x-forwarded-host", host);
+  }
+
   return headers;
 }
 

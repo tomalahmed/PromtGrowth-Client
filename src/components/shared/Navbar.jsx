@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
-import { toast } from "react-toastify";
 import useAuth from "@/hooks/useAuth";
+import { logoutAndRefresh } from "@/utils/navigateAfterAuth";
 import { isDemoAccount } from "@/lib/demoAccounts";
 import {
   getDashboardHref,
@@ -25,7 +25,6 @@ function NavLink({ link, active, onClick, className }) {
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, loading, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -38,14 +37,8 @@ export default function Navbar() {
   const closeMobile = () => setMobileOpen(false);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      toast.success("Logged out successfully");
-      router.push("/");
-      closeMobile();
-    } catch {
-      toast.error("Failed to logout");
-    }
+    closeMobile();
+    await logoutAndRefresh(logout);
   };
 
   const desktopLinkClass = (active) =>

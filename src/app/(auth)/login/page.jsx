@@ -7,6 +7,7 @@ import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import { AuthField, AuthInput } from "@/components/auth/AuthField";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import AuthLoadingScreen from "@/components/auth/AuthLoadingScreen";
 import useAuth from "@/hooks/useAuth";
 import { navigateAfterAuth } from "@/utils/navigateAfterAuth";
 import {
@@ -15,6 +16,17 @@ import {
 } from "@/lib/demoAccounts";
 
 function getErrorMessage(error) {
+  if (error?.isNetworkError) {
+    return "Cannot reach the server. Check your connection and try again.";
+  }
+
+  if (error?.code?.startsWith("auth/")) {
+    if (error.code === "auth/account-exists-with-different-credential") {
+      return "This email is already registered. Sign in with email and password instead.";
+    }
+    return "Google sign-in was interrupted. Please try again.";
+  }
+
   return (
     error?.response?.data?.message ||
     error?.message ||
@@ -24,7 +36,8 @@ function getErrorMessage(error) {
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const { user, loading, login, googleLogin } = useAuth();
+  const { user, loading, completingGoogle, authError, clearAuthError, login, googleLogin } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,6 +45,12 @@ function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [demoAccount, setDemoAccount] = useState(null);
   const autoLoginAttempted = useRef(false);
+
+  useEffect(() => {
+    if (!authError) return;
+    toast.error(authError);
+    clearAuthError();
+  }, [authError, clearAuthError]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -92,7 +111,9 @@ function LoginForm() {
     setGoogleLoading(true);
 
     try {
-      const data = await googleLogin();
+      const redirectTarget =
+        searchParams.get("redirect") || window.location.pathname + window.location.search;
+      const data = await googleLogin(redirectTarget);
 
       if (data?.redirected) {
         return;
@@ -101,17 +122,20 @@ function LoginForm() {
       toast.success("Signed in with Google!");
       navigateAfterAuth(data.data.role, searchParams.get("redirect"));
     } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
       setGoogleLoading(false);
+      toast.error(getErrorMessage(error));
     }
   };
 
-  if (loading) {
+  if (loading || completingGoogle) {
     return (
-      <main className="mx-auto w-full max-w-[440px] text-center">
-        <p className="text-on-surface-variant">Loading...</p>
-      </main>
+      <AuthLoadingScreen
+        message={
+          completingGoogle
+            ? "Completing your Google sign-in..."
+            : "Loading your session..."
+        }
+      />
     );
   }
 
@@ -215,6 +239,7 @@ function LoginForm() {
           variant="soft"
           onClick={handleGoogleLogin}
           disabled={googleLoading || submitting}
+          loading={googleLoading}
         />
       </div>
 
@@ -243,9 +268,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <main className="mx-auto w-full max-w-[440px] text-center">
-          <p className="text-on-surface-variant">Loading...</p>
-        </main>
+        <AuthLoadingScreen message="Loading your session..." />
       }
     >
       <LoginForm />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -17,8 +17,8 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { toast } from "react-toastify";
 import useAuth from "@/hooks/useAuth";
+import { logoutAndRefresh } from "@/utils/navigateAfterAuth";
 import { cn } from "@/lib/cn";
 
 const ADMIN_NAV = [
@@ -70,20 +70,14 @@ function isNavActive(pathname, item) {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { logout } = useAuth();
   const [open, setOpen] = useState(false);
 
   const closeMenu = () => setOpen(false);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      toast.success("Logged out");
-      router.push("/");
-    } catch {
-      toast.error("Failed to logout");
-    }
+    closeMenu();
+    await logoutAndRefresh(logout);
   };
 
   const sidebarBody = (
