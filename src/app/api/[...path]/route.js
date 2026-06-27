@@ -1,3 +1,7 @@
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+
 const API_URL = (process.env.API_URL || "http://localhost:5000").replace(/\/$/, "");
 
 const FORWARD_REQUEST_HEADERS = [
@@ -35,35 +39,23 @@ function buildUpstreamHeaders(request) {
   return headers;
 }
 
-function buildProxyResponse(upstream) {
-  const headers = new Headers();
-  const contentType = upstream.headers.get("content-type");
-
-  if (contentType) {
-    headers.set("content-type", contentType);
-  }
-
+function applyUpstreamCookies(response, upstream) {
   const setCookies =
     typeof upstream.headers.getSetCookie === "function"
       ? upstream.headers.getSetCookie()
       : [];
 
-  for (const cookie of setCookies) {
-    headers.append("set-cookie", cookie);
-  }
-
-  if (!setCookies.length) {
-    const singleCookie = upstream.headers.get("set-cookie");
-    if (singleCookie) {
-      headers.set("set-cookie", singleCookie);
+  if (setCookies.length) {
+    for (const cookie of setCookies) {
+      response.headers.append("set-cookie", cookie);
     }
+    return;
   }
 
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers,
-  });
+  const singleCookie = upstream.headers.get("set-cookie");
+  if (singleCookie) {
+    response.headers.set("set-cookie", singleCookie);
+  }
 }
 
 async function proxyRequest(request, context) {
@@ -81,7 +73,20 @@ async function proxyRequest(request, context) {
   }
 
   const upstream = await fetch(targetUrl, init);
-  return buildProxyResponse(upstream);
+  const body = await upstream.arrayBuffer();
+  const response = new NextResponse(body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+  });
+
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) {
+    response.headers.set("content-type", contentType);
+  }
+
+  applyUpstreamCookies(response, upstream);
+
+  return response;
 }
 
 export const GET = proxyRequest;

@@ -11,14 +11,22 @@ import {
 import {
   getRedirectResult,
   onAuthStateChanged,
+  signInWithPopup,
   signInWithRedirect,
   signOut,
 } from "firebase/auth";
 import axiosInstance from "@/lib/axiosInstance";
-import { getFirebaseAuth } from "@/lib/firebase";
+import { ensureFirebaseReady, getFirebaseAuth } from "@/lib/firebase";
 import { saveAuthRedirect } from "@/utils/authSession";
 
 export const AuthContext = createContext(null);
+
+const POPUP_FALLBACK_CODES = new Set([
+  "auth/popup-blocked",
+  "auth/popup-closed-by-user",
+  "auth/cancelled-popup-request",
+  "auth/operation-not-supported-in-this-environment",
+]);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -73,16 +81,36 @@ export function AuthProvider({ children }) {
 
     const initializeAuth = async () => {
       try {
-        const { auth } = getFirebaseAuth();
+        const auth = await ensureFirebaseReady();
 
-        const redirectResult = await getRedirectResult(auth);
-        if (redirectResult?.user) {
+        if (!cancelled) {
+          setCompletingGoogle(sessionStorage.getItem("pg_google_pending") === "1");
+        }
+
+        let redirectResult = null;
+        try {
+          redirectResult = await getRedirectResult(auth);
+        } catch (redirectError) {
+          console.error("[auth] getRedirectResult failed", redirectError);
+        } finally {
+          sessionStorage.removeItem("pg_google_pending");
+        }
+
+        const firebaseUser = redirectResult?.user ?? auth.currentUser;
+
+        if (firebaseUser) {
           if (!cancelled) {
             setCompletingGoogle(true);
             setAuthError(null);
           }
-          await syncFirebaseUser(redirectResult.user);
-          return;
+
+          try {
+            await fetchMe();
+            return;
+          } catch {
+            await syncFirebaseUser(firebaseUser);
+            return;
+          }
         }
 
         try {
@@ -93,12 +121,9 @@ export function AuthProvider({ children }) {
             setUser(null);
           }
         }
-
-        if (auth.currentUser) {
-          await syncFirebaseUser(auth.currentUser);
-        }
       } catch (error) {
         console.error("[auth] Session initialization failed", error);
+        sessionStorage.removeItem("pg_google_pending");
         if (!cancelled) {
           setUser(null);
           setAuthError(
@@ -113,20 +138,24 @@ export function AuthProvider({ children }) {
     };
 
     try {
-      const { auth } = getFirebaseAuth();
-
       initializeAuth();
 
-      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (initializing.current || !firebaseUser) {
-          return;
-        }
+      ensureFirebaseReady().then((auth) => {
+        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (initializing.current || !firebaseUser) {
+            return;
+          }
 
-        try {
-          await syncFirebaseUser(firebaseUser);
-        } catch (error) {
-          console.error("[auth] Failed to sync Firebase user", error);
-        }
+          try {
+            await fetchMe();
+          } catch {
+            try {
+              await syncFirebaseUser(firebaseUser);
+            } catch (error) {
+              console.error("[auth] Failed to sync Firebase user", error);
+            }
+          }
+        });
       });
     } catch {
       finishLoading();
@@ -161,6 +190,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    sessionStorage.removeItem("pg_google_pending");
+
     try {
       await axiosInstance.post("/auth/logout");
     } catch {
@@ -178,11 +209,24 @@ export function AuthProvider({ children }) {
   };
 
   const googleLogin = async (redirectPath) => {
+    await ensureFirebaseReady();
     const { auth, googleProvider } = getFirebaseAuth();
 
     saveAuthRedirect(redirectPath);
-    await signInWithRedirect(auth, googleProvider);
-    return { redirected: true };
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      sessionStorage.removeItem("pg_google_pending");
+      return await syncFirebaseUser(result.user);
+    } catch (error) {
+      if (!POPUP_FALLBACK_CODES.has(error?.code)) {
+        throw error;
+      }
+
+      sessionStorage.setItem("pg_google_pending", "1");
+      await signInWithRedirect(auth, googleProvider);
+      return { redirected: true };
+    }
   };
 
   const value = useMemo(

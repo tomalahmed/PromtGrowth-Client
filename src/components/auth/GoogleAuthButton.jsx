@@ -44,7 +44,7 @@ export default function GoogleAuthButton({
           />
         </svg>
       )}
-      <span>{loading ? "Redirecting to Google..." : label}</span>
+      <span>{loading ? "Signing in with Google..." : label}</span>
     </button>
   );
 }
