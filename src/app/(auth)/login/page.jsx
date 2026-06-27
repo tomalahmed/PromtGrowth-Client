@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import { AuthField, AuthInput } from "@/components/auth/AuthField";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import useAuth from "@/hooks/useAuth";
-import { getDashboardPath } from "@/utils/roleRedirect";
+import { navigateAfterAuth } from "@/utils/navigateAfterAuth";
 import {
   DEMO_PASSWORD,
   getDemoAccountByEmail,
@@ -23,7 +23,6 @@ function getErrorMessage(error) {
 }
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, login, googleLogin } = useAuth();
   const [email, setEmail] = useState("");
@@ -34,14 +33,11 @@ function LoginForm() {
   const [demoAccount, setDemoAccount] = useState(null);
   const autoLoginAttempted = useRef(false);
 
-  const redirectPath =
-    searchParams.get("redirect") || (user ? getDashboardPath(user.role) : null);
-
   useEffect(() => {
     if (!loading && user) {
-      router.replace(redirectPath || getDashboardPath(user.role));
+      navigateAfterAuth(user.role, searchParams.get("redirect"));
     }
-  }, [loading, user, router, redirectPath]);
+  }, [loading, user, searchParams]);
 
   useEffect(() => {
     if (loading || user) return;
@@ -65,7 +61,7 @@ function LoginForm() {
       try {
         const data = await login({ email: demoEmail, password: DEMO_PASSWORD });
         toast.success(`Signed in as demo ${data.data.role}`);
-        router.push(searchParams.get("redirect") || getDashboardPath(data.data.role));
+        navigateAfterAuth(data.data.role, searchParams.get("redirect"));
       } catch (error) {
         autoLoginAttempted.current = false;
         toast.error(getErrorMessage(error));
@@ -75,11 +71,7 @@ function LoginForm() {
     };
 
     runDemoLogin();
-  }, [loading, user, searchParams, login, router]);
-
-  const navigateAfterAuth = (role) => {
-    router.push(searchParams.get("redirect") || getDashboardPath(role));
-  };
+  }, [loading, user, searchParams, login]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,7 +80,7 @@ function LoginForm() {
     try {
       const data = await login({ email, password });
       toast.success("Welcome back!");
-      navigateAfterAuth(data.data.role);
+      navigateAfterAuth(data.data.role, searchParams.get("redirect"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -107,7 +99,7 @@ function LoginForm() {
       }
 
       toast.success("Signed in with Google!");
-      navigateAfterAuth(data.data.role);
+      navigateAfterAuth(data.data.role, searchParams.get("redirect"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {

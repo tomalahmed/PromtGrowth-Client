@@ -1,7 +1,20 @@
 "use client";
 
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  getRedirectResult,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+} from "firebase/auth";
 import axiosInstance from "@/lib/axiosInstance";
 import { getFirebaseAuth } from "@/lib/firebase";
 
@@ -10,43 +23,94 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const syncInFlight = useRef(null);
+  const initializing = useRef(true);
 
   const syncFirebaseUser = useCallback(async (firebaseUser) => {
-    const idToken = await firebaseUser.getIdToken();
+    if (syncInFlight.current) {
+      return syncInFlight.current;
+    }
 
-    const { data } = await axiosInstance.post("/auth/google-sync", {
-      idToken,
-      name: firebaseUser.displayName || "User",
-      email: firebaseUser.email,
-      photoURL: firebaseUser.photoURL || "",
-    });
+    const syncPromise = (async () => {
+      const idToken = await firebaseUser.getIdToken();
 
+      const { data } = await axiosInstance.post("/auth/google-sync", {
+        idToken,
+        name: firebaseUser.displayName || "User",
+        email: firebaseUser.email,
+        photoURL: firebaseUser.photoURL || "",
+      });
+
+      setUser(data.data);
+      return data;
+    })();
+
+    syncInFlight.current = syncPromise;
+
+    try {
+      return await syncPromise;
+    } finally {
+      syncInFlight.current = null;
+    }
+  }, []);
+
+  const fetchMe = useCallback(async () => {
+    const { data } = await axiosInstance.get("/auth/me");
     setUser(data.data);
     return data;
   }, []);
 
-  const fetchMe = useCallback(async () => {
-    try {
-      const { data } = await axiosInstance.get("/auth/me");
-      setUser(data.data);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchMe();
-  }, [fetchMe]);
-
-  useEffect(() => {
+    let cancelled = false;
     let unsubscribe = null;
+
+    const finishLoading = () => {
+      if (!cancelled) {
+        initializing.current = false;
+        setLoading(false);
+      }
+    };
+
+    const initializeAuth = async () => {
+      try {
+        const { auth } = getFirebaseAuth();
+
+        const redirectResult = await getRedirectResult(auth);
+        if (redirectResult?.user) {
+          await syncFirebaseUser(redirectResult.user);
+          return;
+        }
+
+        try {
+          await fetchMe();
+          return;
+        } catch {
+          setUser(null);
+        }
+
+        if (auth.currentUser) {
+          await syncFirebaseUser(auth.currentUser);
+        }
+      } catch (error) {
+        console.error("[auth] Session initialization failed", error);
+        if (!cancelled) {
+          setUser(null);
+        }
+      } finally {
+        finishLoading();
+      }
+    };
 
     try {
       const { auth } = getFirebaseAuth();
 
+      initializeAuth();
+
       unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (initializing.current) {
+          return;
+        }
+
         if (!firebaseUser) {
           return;
         }
@@ -55,20 +119,19 @@ export function AuthProvider({ children }) {
           await syncFirebaseUser(firebaseUser);
         } catch (error) {
           console.error("[auth] Failed to sync Firebase user", error);
-        } finally {
-          setLoading(false);
         }
       });
     } catch {
-      setLoading(false);
+      finishLoading();
     }
 
     return () => {
+      cancelled = true;
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [syncFirebaseUser]);
+  }, [syncFirebaseUser, fetchMe]);
 
   const register = async ({ name, email, password, photoURL = "" }) => {
     const { data } = await axiosInstance.post("/auth/register", {

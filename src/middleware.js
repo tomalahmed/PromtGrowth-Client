@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getDashboardPath } from "@/utils/roleRedirect";
 
 const AUTH_ROUTES = ["/login", "/register"];
 
@@ -14,6 +15,18 @@ function isProtectedRoute(pathname) {
   return false;
 }
 
+function getRoleFromToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+
+    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return decoded.role || null;
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("token")?.value;
@@ -25,7 +38,9 @@ export function middleware(request) {
   }
 
   if (AUTH_ROUTES.includes(pathname) && token) {
-    return NextResponse.redirect(new URL("/user", request.url));
+    const role = getRoleFromToken(token);
+    const dashboardPath = getDashboardPath(role);
+    return NextResponse.redirect(new URL(dashboardPath, request.url));
   }
 
   return NextResponse.next();

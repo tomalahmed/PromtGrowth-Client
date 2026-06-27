@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ImageIcon, Lock, Mail, User } from "lucide-react";
 import { toast } from "react-toastify";
 import { AuthField, AuthInput } from "@/components/auth/AuthField";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import useAuth from "@/hooks/useAuth";
-import { getDashboardPath } from "@/utils/roleRedirect";
+import { navigateAfterAuth } from "@/utils/navigateAfterAuth";
 import { CONTACT_EMAIL, getContactMailto } from "@/lib/contact";
 
 function getErrorMessage(error) {
@@ -20,7 +19,6 @@ function getErrorMessage(error) {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
   const { user, loading, register, googleLogin } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,9 +29,9 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace(getDashboardPath(user.role));
+      navigateAfterAuth(user.role);
     }
-  }, [loading, user, router]);
+  }, [loading, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,7 +45,7 @@ export default function RegisterPage() {
         photoURL: photoURL.trim(),
       });
       toast.success("Account created successfully!");
-      router.push(getDashboardPath(data.data.role));
+      navigateAfterAuth(data.data.role);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -66,7 +64,7 @@ export default function RegisterPage() {
       }
 
       toast.success("Signed up with Google!");
-      router.push(getDashboardPath(data.data.role));
+      navigateAfterAuth(data.data.role);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
